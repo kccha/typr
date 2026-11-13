@@ -31,6 +31,12 @@ The typr buffer has the filetype set to `typr`. Refer to your completion plugins
 how to disable it for that filetype which you can read using the buffer-scoped option
 `vim.bo.filetype`.
 
+# Layout
+
+`:Typr` and `:TyprStats` open in the current window as a normal buffer (no floating window).
+The UI is centered in that window and re-centers whenever the window is resized; `q` or `<ESC>`
+brings back the buffer that was there before.
+
 # Mappings
 
 Whatever buttons you see, the mapping starts from their first letter i.e

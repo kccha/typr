@@ -9,6 +9,11 @@ local empty_line = {
 
 return {
   {
+    lines = ui.ypad,
+    name = "ypad",
+  },
+
+  {
     lines = ui.headerbtns,
     name = "headerbtns",
   },

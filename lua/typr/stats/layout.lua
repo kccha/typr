@@ -13,14 +13,29 @@ local components = {
 local divider = function()
   local result = {}
 
-  for _ = 1, state.h do
+  for _ = 1, state.stats_h do
     table.insert(result, { { "│", "linenr" } })
   end
 
   return result
 end
 
+local ypad = {
+  name = "ypad",
+  lines = function()
+    local lines = {}
+
+    for _ = 1, state.stats_ypad do
+      table.insert(lines, {})
+    end
+
+    return lines
+  end,
+}
+
 local horiz_layout = {
+  ypad,
+
   {
     name = "typrStats",
     lines = function()
@@ -38,6 +53,8 @@ local horiz_layout = {
 }
 
 local vertical_layout = {
+  ypad,
+
   {
     lines = function()
       local data = { "  Dashboard", "Keystrokes", "_pad_", "  History" }

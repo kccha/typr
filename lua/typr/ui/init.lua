@@ -2,6 +2,16 @@ local M = {}
 local state = require "typr.state"
 local voltui = require "volt.ui"
 
+M.ypad = function()
+  local lines = {}
+
+  for _ = 1, state.ypad do
+    table.insert(lines, {})
+  end
+
+  return lines
+end
+
 M.words = function()
   return state.ui_lines
 end
@@ -22,7 +32,7 @@ M.headerbtns = function()
   }
 
   -- 4 = border charw+pad 2 and 2 on both sides
-  local lines = { voltui.hpad(line, state.w - (state.xpad * 2) - 4 ) }
+  local lines = { voltui.hpad(line, state.w_with_pad - 4) }
   voltui.border(lines)
   return lines
 end
@@ -56,7 +66,7 @@ M.stats = function()
     totalstrlen = totalstrlen + vim.api.nvim_strwidth(v[1])
   end
 
-  local lines = { voltui.hpad(txts, state.w - (state.xpad * 2) - 4 ) }
+  local lines = { voltui.hpad(txts, state.w_with_pad - 4) }
   voltui.border(lines)
   table.insert(lines, {})
   return lines

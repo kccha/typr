@@ -17,8 +17,6 @@ return function(ns, winType)
 
   if not transparent then
     bg = lighten(bg, 2)
-    api.nvim_set_hl(ns, "TyprBorder", { fg = bg, bg = bg })
-    api.nvim_set_hl(ns, "TyprNormal", { bg = bg })
   else
     bg = "#000000"
   end

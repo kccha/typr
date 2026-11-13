@@ -141,29 +141,42 @@ end
 
 M.init_volt = function()
   require("volt").gen_data {
-    { buf = state.statsbuf, layout = layout[state.winlayout], xpad = state.xpad, ns = state.ns },
+    { buf = state.statsbuf, layout = layout[state.winlayout], xpad = state.stats_xpad, ns = state.ns },
   }
 end
 
-M.make_winconf = function()
-  local large_screen = state.h + 10 < vim.o.lines
-  local h = large_screen and state.h or vim.o.lines - 7
-  local winw = state.w
+-- picks the layout for the window size, centers it and redraws everything
+M.relayout = function()
+  local volt = require "volt"
+  local win = require "typr.win"
+  local buf = state.statsbuf
+  local winw = win.size(state.statswin)
+  local horiz_w = (2 * state.w_with_pad) + 5 -- 2 views + divider with its padding
 
-  if state.winlayout == "horizontal" then
-    winw = winw * 2
+  if state.config.winlayout == "responsive" then
+    state.winlayout = winw >= horiz_w + (2 * state.pad) and "horizontal" or "vertical"
+  else
+    state.winlayout = state.config.winlayout
   end
 
-  return {
-    row = large_screen and ((vim.o.lines / 2) - (state.h / 2)) or 2,
-    col = (vim.o.columns / 2) - (winw / 2),
-    width = winw,
-    height = h,
-    relative = "editor",
-    style = "minimal",
-    border = "single",
-    zindex = 100,
-  }
+  local w = state.winlayout == "horizontal" and horiz_w or state.w_with_pad
+
+  -- content height is known only after volt has generated the layout
+  state.stats_ypad = 0
+  state.stats_h = 0
+  M.init_volt()
+  state.stats_h = require("volt.state")[buf].h
+
+  state.stats_xpad, state.stats_ypad = win.center(state.statswin, w, state.stats_h)
+  M.init_volt()
+
+  vim.bo[buf].modifiable = true
+  volt.set_empty_lines(buf, state.stats_ypad + state.stats_h, state.stats_xpad + w)
+  vim.bo[buf].modifiable = false
+
+  vim.api.nvim_buf_clear_namespace(buf, state.ns, 0, -1)
+  volt.redraw(buf, "all")
+  win.scroll_top(state.statswin)
 end
 
 return M

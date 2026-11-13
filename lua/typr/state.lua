@@ -1,12 +1,18 @@
 local M = {
   ns = vim.api.nvim_create_namespace "Typr",
-  xpad = 2,
+  pad = 2, -- inner padding of the content
+  xpad = 2, -- left offset of the content, set when centering
+  ypad = 0, -- top offset of the content, set when centering
+  stats_xpad = 2,
+  stats_ypad = 0,
+  stats_h = 0,
   w = 80,
   h = 20,
   linecount = 2,
   default_lines = {},
   ui_lines = {},
   lastchar = nil,
+  header_h = 4, -- rows above the words
   words_row = 4,
   timer = vim.uv.new_timer(),
   secs = 0,
@@ -68,6 +74,6 @@ end
 
 M.reset_vars()
 
-M.w_with_pad = M.w - (2 * M.xpad)
+M.w_with_pad = M.w - (2 * M.pad)
 
 return M

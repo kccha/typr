@@ -297,7 +297,7 @@ local activity_heatmap = function()
   end
 
   table.insert(header, { " More" })
-  table.insert(lines, 1, voltui.hpad(header, 80 - (2*state.xpad ) -4))
+  table.insert(lines, 1, voltui.hpad(header, state.w_with_pad - 4))
 
   return lines
 end

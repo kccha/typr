@@ -306,26 +306,78 @@ M.start_timer = function()
   )
 end
 
-M.set_emptylines = function()
+-- typed: text the user has typed so far on each words row (kept on resize)
+M.set_emptylines = function(typed)
   local maxline = (state.linecount + state.words_row)
   state.words_row_end = maxline
 
   local lines = {}
+  local pad = string.rep(" ", state.xpad)
+  local fill = string.rep(" ", state.xpad + state.w_with_pad)
 
-  for i = 1, state.h do
-    local str = (i > state.words_row and i <= maxline) and "" or string.rep(" ", state.w_with_pad)
+  for i = 1, state.ypad + state.h do
+    local str = fill
+
+    if i > state.words_row and i <= maxline then
+      local text = typed and typed[i - state.words_row] or ""
+      str = text == "" and "" or pad .. text
+    end
+
     table.insert(lines, str)
   end
 
   vim.api.nvim_buf_set_lines(state.buf, 0, -1, false, lines)
 end
 
+-- (re)centers the ui in its window and redraws everything
+M.relayout = function(keep_typed)
+  local api = vim.api
+  local buf, win = state.buf, state.win
+  local old_xpad, old_ypad = state.xpad, state.ypad
+  local typed
+
+  -- with virtualedit the cursor can be past the end of the line, which
+  -- nvim_win_get_cursor doesnt report
+  local pos = api.nvim_win_call(win, vim.fn.getcurpos)
+  local cursor = { pos[2], pos[3] - 1 + pos[4] }
+
+  if keep_typed then
+    typed = api.nvim_buf_get_lines(buf, state.words_row, state.words_row + state.linecount, false)
+
+    for i, line in ipairs(typed) do
+      typed[i] = line:sub(old_xpad + 1)
+    end
+  end
+
+  local typr = require "typr"
+
+  -- content height is known only after volt has generated the layout
+  state.ypad = 0
+  typr.initialize_volt()
+  state.h = require("volt.state")[buf].h
+
+  state.xpad, state.ypad = require("typr.win").center(win, state.w_with_pad, state.h)
+  state.words_row = state.header_h + state.ypad
+  typr.initialize_volt()
+
+  state.relayouting = true
+  M.set_emptylines(typed)
+  state.relayouting = false
+
+  api.nvim_buf_clear_namespace(buf, state.ns, 0, -1)
+  volt.redraw(buf, "all")
+
+  if keep_typed then
+    local row = math.min(math.max(cursor[1] + state.ypad - old_ypad, 1), api.nvim_buf_line_count(buf))
+    api.nvim_win_set_cursor(win, { row, math.max(cursor[2] + state.xpad - old_xpad, 0) })
+  end
+
+  require("typr.win").scroll_top(win)
+end
+
 M.on_finish = function()
   state.timer:stop()
   vim.cmd.stopinsert()
-
-  state.h = state.h + 2
-  vim.api.nvim_win_set_height(state.win, state.h)
 
   vim.schedule(function()
     M.get_accuracy()
@@ -333,9 +385,7 @@ M.on_finish = function()
     M.char_accuracy()
     M.char_times_calc()
 
-    M.set_emptylines()
-    require("typr").initialize_volt()
-    volt.redraw(state.buf, "all")
+    M.relayout()
 
     require("typr.stats.utils").save()
   end)
@@ -344,7 +394,7 @@ end
 M.handle_test_end = function()
   local pos = vim.api.nvim_win_get_cursor(state.win)
   local curline_endcol = #state.default_lines[pos[1] - state.words_row]
-  local cur_col = pos[2] - 1
+  local cur_col = pos[2] - state.xpad + 1
 
   if cur_col == curline_endcol then
     if state.words_row_end == pos[1] then
