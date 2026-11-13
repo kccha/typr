@@ -24,6 +24,9 @@ return function()
 
   map("n", "o", "", { buffer = state.buf })
   map("i", "<cr>", "", { buffer = state.buf })
+  -- a test ends in normal mode, where an <cr> typed out of habit at the end
+  -- of the last line would move the cursor down into the padding
+  map("n", "<cr>", "", { buffer = state.buf })
 
   -- deleting past the start of a words line joins it with the line above,
   -- which shifts the padding rows into the words rows

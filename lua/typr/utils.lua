@@ -370,6 +370,10 @@ M.relayout = function(keep_typed)
   if keep_typed then
     local row = math.min(math.max(cursor[1] + state.ypad - old_ypad, 1), api.nvim_buf_line_count(buf))
     api.nvim_win_set_cursor(win, { row, math.max(cursor[2] + state.xpad - old_xpad, 0) })
+  else
+    -- the typed text is gone and the words row may have moved (e.g. the
+    -- results showing up), so the old cursor spot means nothing anymore
+    api.nvim_win_set_cursor(win, { state.words_row + 1, state.xpad })
   end
 
   require("typr.win").scroll_top(win)
