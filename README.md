@@ -27,9 +27,9 @@ https://github.com/nvzone/typr/blob/main/lua/typr/state.lua#L18
 
 ## Disable completion
 
-The typr buffer has the filetype set to `typr`. Refer to your completion plugins documentation on
-how to disable it for that filetype which you can read using the buffer-scoped option
-`vim.bo.filetype`.
+Typr disables blink.cmp, nvim-cmp, mini.completion, the builtin `autocomplete`, mini.pairs and
+auto-pairs in its buffer by itself. For any other completion plugin, disable it for the `typr`
+filetype (see its documentation), or do it in `on_attach`.
 
 # Layout
 
@@ -46,7 +46,57 @@ In Typr window
 - s = toggle symbols
 - n = toggle numbers
 - r = toggle random
-- 3 = set 3 lines , and so on!
+- p = toggle phrases
+- c = toggle code
+- 1 to 5 = set 3, 6, 9, 12 or 15 lines
+
+# Code mode
+
+Practice typing code instead of prose: press `c` in the Typr window, or make it the default with
+`mode = "code"`. Snippets are typed line by line with their indentation; `<Tab>` fills in a line's
+indentation for you. C++ snippets are built in, and you can add your own or other languages:
+
+```lua
+opts = {
+  mode = "code",
+  code = {
+    lang = "rust", -- default "cpp"
+    snippets = {
+      -- replaces the built-in snippets for that language
+      rust = {
+        "fn main() {\n    let v: Vec<i32> = (1..=10).collect();\n    println!(\"{:?}\", v);\n}",
+      },
+    },
+  },
+}
+```
+
+Lines wider than the typing area (76 columns) are skipped.
+
+## Code from your own files
+
+`:Typr ~/projects/engine/src` types code from the files in that directory (searched recursively,
+skipping hidden directories, `node_modules`, `build` and the like). To make it the default:
+
+```lua
+opts = {
+  mode = "code",
+  code = {
+    paths = { "~/projects/engine/src" },
+    filetypes = { "cpp", "c" }, -- optional, programming languages by default
+  },
+}
+```
+
+Tests start at good spots: functions and classes found with treesitter (using the
+nvim-treesitter-textobjects queries when installed), or, for languages without a parser, at
+unindented lines after a blank line. From there the file is read on, dedented to the first line, and
+stops before lines that are too wide, contain non-ASCII characters, or leave the scope it started
+in. The file and line a test came from is shown below the code until you start typing.
+
+Everything has to be typed by hand: Typr turns off completion (blink.cmp, nvim-cmp, mini.completion
+and the builtin `autocomplete`) and auto pairing (mini.pairs, auto-pairs) in its buffer, and maps
+brackets and quotes to insert only themselves, so no closing pair is ever added for you.
 
 In Typrstats vertical window
 
