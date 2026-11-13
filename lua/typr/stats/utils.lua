@@ -37,9 +37,10 @@ M.gen_default_stats = function()
 end
 
 M.save_str_tofile = function(tb)
-  local str = "'" .. vim.json.encode(tb) .. "'"
+  -- %q escapes quotes and backslashes, which typed chars like ' and \ add
+  local str = string.format("%q", vim.json.encode(tb))
 
-  local data = "return string.dump(function()return" .. str .. "end, true)"
+  local data = "return string.dump(function()return " .. str .. " end, true)"
   local path = state.config.stats_filepath
   local file = io.open(path, "wb")
   file:write(loadstring(data)())
