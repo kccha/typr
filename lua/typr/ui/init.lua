@@ -25,11 +25,12 @@ M.headerbtns = function()
     { "   Random ", config.random and "exgreen" or "normal" },
     { "   Phrases ", config.mode == 'phrases' and "exgreen" or "normal" },
     { "_pad_" },
-    { "Lines ", "exred" },
-    { " 3 *", state.linecount == 3 and "" or "commentfg" },
-    { " 6 *", state.linecount == 6 and "" or "commentfg" },
-    { " 9", state.linecount == 9 and "" or "commentfg" },
+    { "Lines", "exred" },
   }
+
+  for _, n in ipairs(state.linecounts) do
+    table.insert(line, { " " .. n, state.linecount == n and "" or "commentfg" })
+  end
 
   -- 4 = border charw+pad 2 and 2 on both sides
   local lines = { voltui.hpad(line, state.w_with_pad - 4) }
@@ -85,7 +86,12 @@ M.mappings = function()
       { " i ", "visual" },
       { " - Start ", "commentfg" },
 
-      { "                   " },
+      { "  " },
+
+      { " 1-5 ", "visual" },
+      { " - Lines ", "commentfg" },
+
+      { "  " },
 
       { " CTRL ", "visual" },
       { " " },
