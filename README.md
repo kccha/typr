@@ -48,7 +48,7 @@ In Typr window
 - r = toggle random
 - p = toggle phrases
 - c = toggle code
-- 1 to 5 = set 3, 6, 9, 12 or 15 lines
+- 1 to 9, 0 = set 3, 6, 9 ... 27 or 30 lines (3 per key, 0 is 30)
 
 # Code mode
 

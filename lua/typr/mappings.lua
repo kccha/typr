@@ -17,8 +17,9 @@ return function()
   map("n", "p", myapi.toggle_phrases, { buffer = state.buf })
   map("n", "c", myapi.toggle_code, { buffer = state.buf })
 
+  -- keys 1 to 9, then 0 for the 10th
   for i, n in ipairs(state.linecounts) do
-    map("n", tostring(i), function()
+    map("n", tostring(i % 10), function()
       myapi.set_linecount(n)
     end, { buffer = state.buf })
   end
