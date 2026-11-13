@@ -24,6 +24,7 @@ M.headerbtns = function()
     { "   Numbers ", config.numbers and "exgreen" or "normal" },
     { "   Random ", config.random and "exgreen" or "normal" },
     { "   Phrases ", config.mode == 'phrases' and "exgreen" or "normal" },
+    { "   Code ", config.mode == "code" and "exgreen" or "normal" },
     { "_pad_" },
     { "Lines", "exred" },
   }
@@ -42,7 +43,14 @@ M.stats = function()
   local stats = state.stats
 
   if state.secs == 0 then
-    return { {}, {} }
+    -- where the code being typed comes from, when its from files
+    local source = state.code_source and state.config.mode == "code" and state.code_source
+
+    if source and #source > state.w_with_pad then
+      source = "…" .. source:sub(-(state.w_with_pad - 1))
+    end
+
+    return { source and { { source, "commentfg" } } or {}, {} }
   end
 
   if stats.rawpm == 0 then

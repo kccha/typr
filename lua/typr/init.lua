@@ -23,6 +23,17 @@ M.open = function()
 
   state.buf = api.nvim_create_buf(false, true)
 
+  -- everything has to be typed by hand: no completion and no auto pairing.
+  -- set before the buffer is shown, as plugins attach on BufEnter/InsertEnter
+  local b = vim.b[state.buf]
+  b.completion = false -- blink.cmp (and the general convention)
+  b.minicompletion_disable = true
+  b.minipairs_disable = true
+  b.autopairs_enabled = 0 -- jiangmiao/auto-pairs
+  pcall(function()
+    vim.bo[state.buf].autocomplete = false -- builtin, nvim 0.12+
+  end)
+
   state.win = require("typr.win").open(state.buf, {
     winopts = { virtualedit = "all" },
     on_resize = function(win)
@@ -47,6 +58,12 @@ M.open = function()
 
   vim.bo[state.buf].filetype = "typr"
   vim.bo[state.buf].ma = true
+
+  -- typing "}" or "#" would otherwise re-indent the line being typed
+  vim.bo[state.buf].autoindent = false
+  vim.bo[state.buf].smartindent = false
+  vim.bo[state.buf].cindent = false
+  vim.bo[state.buf].indentexpr = ""
 
   api.nvim_win_set_cursor(state.win, { state.words_row + 1, state.xpad })
 

@@ -28,7 +28,7 @@ local M = {
 
   ----------------------- user config -----------------------
   config = {
-    mode = "words", -- words, phrases
+    mode = "words", -- words, phrases, code
     winlayout = "responsive",
     kblayout = "qwerty",
     wpm_goal = 130,
@@ -36,6 +36,18 @@ local M = {
     symbols = false,
     random = false,
     phrases = nil, -- can be a table of strings
+    code = {
+      lang = "cpp", -- snippets used by the code mode
+      -- snippets per language, replacing the built-in ones for that language
+      -- each snippet is a multi-line string, e.g.
+      -- snippets = { rust = { "fn main() {\n    println!(\"hi\");\n}" } },
+      snippets = nil,
+      -- directories (or files) to take code from instead of the snippets,
+      -- e.g. { "~/projects/engine/src" }; also set by `:Typr <dir>`
+      paths = nil,
+      -- only these filetypes from paths, e.g. { "cpp", "c" }; all code by default
+      filetypes = nil,
+    },
     insert_on_start = false,
     stats_filepath = vim.fn.stdpath "data" .. "/typrstats",
     mappings = nil,

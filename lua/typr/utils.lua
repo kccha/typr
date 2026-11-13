@@ -129,26 +129,76 @@ M.phrases_to_lines = function()
   return vim.list_slice(lines, 1, state.linecount)
 end
 
+-- lines of a snippet that can be typed: tabs expanded, trailing whitespace
+-- and blank lines dropped, and nothing wider than the typing area
+local snippet_lines = function(snippet)
+  local result = {}
+
+  for _, line in ipairs(vim.split(snippet, "\n")) do
+    line = line:gsub("\t", "    "):gsub("%s+$", "")
+
+    if line ~= "" and #line <= state.w_with_pad then
+      table.insert(result, line)
+    end
+  end
+
+  return result
+end
+
+M.code_to_lines = function()
+  local code = state.config.code
+  state.code_source = nil
+
+  if code.paths and #code.paths > 0 then
+    local lines, source =
+      require("typr.code_files").gen_lines(code.paths, code.filetypes, state.linecount, state.w_with_pad)
+
+    if lines then
+      state.code_source = source
+      return lines
+    end
+
+    vim.notify("typr: no code found in " .. table.concat(code.paths, ", ") .. ", using snippets", vim.log.levels.WARN)
+  end
+
+  local snippets = (code.snippets or {})[code.lang] or require("typr.constants.code")[code.lang]
+  local lines = {}
+
+  -- snippets are taken from their first line so the code reads naturally,
+  -- and more are appended until there are enough lines
+  for _ = 1, 100 do
+    if not snippets or #lines >= state.linecount then
+      break
+    end
+
+    for _, line in ipairs(snippet_lines(snippets[math.random(1, #snippets)])) do
+      if #lines < state.linecount then
+        table.insert(lines, line)
+      end
+    end
+  end
+
+  if #lines < state.linecount then
+    vim.notify("typr: no code snippets for '" .. tostring(code.lang) .. "'", vim.log.levels.WARN)
+    return M.words_to_lines()
+  end
+
+  return lines
+end
+
 M.mode_funcs = {
   words = M.words_to_lines,
   phrases = M.phrases_to_lines,
+  code = M.code_to_lines,
 }
 
 M.gen_default_lines = function()
   state.default_lines = M.mode_funcs[state.config.mode]()
 
-  local ui_lines = {}
-
-  for _, v in ipairs(state.default_lines) do
-    local line = {}
-    for word in string.gmatch(v, "%S+") do
-      table.insert(line, { word .. " ", "commentfg" })
-    end
-
-    table.insert(ui_lines, line)
-  end
-
-  state.ui_lines = ui_lines
+  -- one chunk per line keeps the spacing (code indentation) as is
+  state.ui_lines = vim.tbl_map(function(line)
+    return { { line, "commentfg" } }
+  end, state.default_lines)
 end
 
 M.gen_lines_diff = function(line, userline)

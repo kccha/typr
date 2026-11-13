@@ -7,7 +7,7 @@ M.redraw_words_header = function(mode)
   state.config.mode = mode or "words"
   volt.redraw(state.buf, "headerbtns")
   utils.gen_default_lines()
-  volt.redraw(state.buf, "words")
+  volt.redraw(state.buf, { "words", "stats" })
 end
 
 M.toggle_symbols = function()
@@ -25,16 +25,26 @@ M.toggle_random = function()
   M.redraw_words_header()
 end
 
-M.toggle_phrases = function()
-  state.config.mode = state.config.mode == "phrases" and "words" or "phrases"
+-- switches between words and the given mode (phrases or code)
+local toggle_mode = function(mode)
+  state.config.mode = state.config.mode == mode and "words" or mode
 
-  if state.config.mode == "phrases" then
+  -- these only apply to the words mode
+  if state.config.mode ~= "words" then
     state.config.numbers = false
     state.config.symbols = false
     state.config.random = false
   end
 
   M.redraw_words_header(state.config.mode)
+end
+
+M.toggle_phrases = function()
+  toggle_mode "phrases"
+end
+
+M.toggle_code = function()
+  toggle_mode "code"
 end
 
 M.set_linecount = function(x)
