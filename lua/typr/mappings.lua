@@ -9,10 +9,7 @@ return function()
     vim.cmd.startinsert()
   end, { buffer = state.buf })
 
-  map("n", "<C-r>", function()
-    api.nvim_win_set_cursor(state.win, { state.words_row + 1, state.xpad })
-    myapi.restart()
-  end, { buffer = state.buf })
+  map("n", "<C-r>", myapi.restart, { buffer = state.buf })
 
   map("n", "s", myapi.toggle_symbols, { buffer = state.buf })
   map("n", "n", myapi.toggle_numbers, { buffer = state.buf })

@@ -44,13 +44,12 @@ M.set_linecount = function(x)
 end
 
 M.restart = function()
-  if state.stats.rawpm == 0 then
-    return
-  end
-
   state.reset_vars()
   utils.gen_default_lines()
   utils.relayout()
+
+  -- relayout can move the words row, so place the cursor after it
+  vim.api.nvim_win_set_cursor(state.win, { state.words_row + 1, state.xpad })
 end
 
 return M
