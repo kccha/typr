@@ -10,6 +10,7 @@ return function()
   end, { buffer = state.buf })
 
   map("n", "<C-r>", myapi.restart, { buffer = state.buf })
+  map("n", "<C-n>", myapi.jump, { buffer = state.buf })
 
   map("n", "s", myapi.toggle_symbols, { buffer = state.buf })
   map("n", "n", myapi.toggle_numbers, { buffer = state.buf })

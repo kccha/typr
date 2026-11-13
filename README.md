@@ -88,11 +88,16 @@ opts = {
 }
 ```
 
-Tests start at good spots: functions and classes found with treesitter (using the
-nvim-treesitter-textobjects queries when installed), or, for languages without a parser, at
-unindented lines after a blank line. From there the file is read on, dedented to the first line, and
-stops before lines that are too wide, contain non-ASCII characters, or leave the scope it started
-in. The file and line a test came from is shown below the code until you start typing.
+Reading starts at a good spot: a function or class found with treesitter (using the
+nvim-treesitter-textobjects queries when installed), or, for languages without a parser, an
+unindented line after a blank line. From there the file is typed continuously: after a finished
+test, `<C-r>` carries on with the lines right after it, keeping the indentation lined up, and at the
+end of the file reading goes on in another file. Blank lines and lines with non-ASCII characters
+are skipped, lines wider than the typing area are wrapped. The file and line a test came from is
+shown below the code until you start typing.
+
+- `<C-r>` after finishing a test = the next lines; before finishing = the same lines again
+- `<C-n>` = start reading somewhere else
 
 Everything has to be typed by hand: Typr turns off completion (blink.cmp, nvim-cmp, mini.completion
 and the builtin `autocomplete`) and auto pairing (mini.pairs, auto-pairs) in its buffer, and maps

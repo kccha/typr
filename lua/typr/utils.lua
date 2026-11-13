@@ -145,13 +145,14 @@ local snippet_lines = function(snippet)
   return result
 end
 
-M.code_to_lines = function()
+-- how: for code from files, see code_files.gen_lines
+M.code_to_lines = function(how)
   local code = state.config.code
   state.code_source = nil
 
   if code.paths and #code.paths > 0 then
     local lines, source =
-      require("typr.code_files").gen_lines(code.paths, code.filetypes, state.linecount, state.w_with_pad)
+      require("typr.code_files").gen_lines(code.paths, code.filetypes, state.linecount, state.w_with_pad, how)
 
     if lines then
       state.code_source = source
@@ -192,8 +193,9 @@ M.mode_funcs = {
   code = M.code_to_lines,
 }
 
-M.gen_default_lines = function()
-  state.default_lines = M.mode_funcs[state.config.mode]()
+-- how: "same", "next" or "jump", for the code mode reading files
+M.gen_default_lines = function(how)
+  state.default_lines = M.mode_funcs[state.config.mode](how or "same")
 
   -- one chunk per line keeps the spacing (code indentation) as is
   state.ui_lines = vim.tbl_map(function(line)
@@ -430,6 +432,7 @@ M.relayout = function(keep_typed)
 end
 
 M.on_finish = function()
+  state.finished = true
   state.timer:stop()
   vim.cmd.stopinsert()
 

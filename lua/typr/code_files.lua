@@ -121,13 +121,18 @@ local read = function(path)
   return text
 end
 
+
+local expand_tabs = function(line)
+  return (line:gsub("\t", "    "))
+end
+
 local is_scope = function(type)
   return not type:find "call"
     and (type:find "function" or type:find "method" or type:find "class" or type:find "struct" or type:find "impl")
 end
 
--- {start_row, end_row} (1-based) of functions and classes
-local ts_ranges = function(text, ft)
+-- first rows (1-based) of functions and classes
+local ts_starts = function(text, ft)
   local lang = vim.treesitter.language.get_lang(ft) or ft
 
   if not pcall(vim.treesitter.language.add, lang) then
@@ -141,13 +146,13 @@ local ts_ranges = function(text, ft)
   end
 
   local root = parser:parse()[1]:root()
-  local ranges = {}
+  local starts = {}
 
   local add = function(node)
     local sr, _, er = node:range()
 
     if er > sr then
-      table.insert(ranges, { sr + 1, er + 1 })
+      table.insert(starts, sr + 1)
     end
   end
 
@@ -163,7 +168,7 @@ local ts_ranges = function(text, ft)
     end
   end
 
-  if #ranges == 0 then
+  if #starts == 0 then
     local walk
 
     walk = function(node)
@@ -181,109 +186,185 @@ local ts_ranges = function(text, ft)
     walk(root)
   end
 
-  return ranges
+  return starts
 end
 
 -- without a parser: unindented lines after a blank line, which is where
 -- top-level definitions usually start
-local indent_ranges = function(lines)
-  local ranges = {}
+local indent_starts = function(lines)
+  local starts = {}
 
   for i, line in ipairs(lines) do
     local prev_blank = i == 1 or not lines[i - 1]:find "%S"
     local starts_def = line:find "^[%a_]" ~= nil
 
     if prev_blank and starts_def and lines[i + 1] and lines[i + 1]:find "%S" then
-      table.insert(ranges, { i, #lines })
+      table.insert(starts, i)
     end
   end
 
-  return ranges
+  return starts
 end
 
-local expand_tabs = function(line)
-  return (line:gsub("\t", "    "))
+-- a reading position: { file, lines (of the file), row, piece, base }, where
+-- piece is the part of a wrapped row to go on from and base the indentation
+-- removed, kept from test to test so the code stays lined up as it carries on
+
+-- a function or class in a random file, to start reading at
+local pick_start = function(files)
+  for _ = 1, 20 do
+    local file = files[math.random(1, #files)]
+    local text = read(file.path)
+
+    if text then
+      local lines = vim.split(text, "\n")
+      local starts = ts_starts(text, file.ft)
+
+      if not starts or #starts == 0 then
+        starts = indent_starts(lines)
+      end
+
+      if #starts > 0 then
+        local row = starts[math.random(1, #starts)]
+        local base = #expand_tabs(lines[row]):match "^ *"
+        return { file = file, lines = lines, row = row, piece = 1, base = base }
+      end
+    end
+  end
 end
 
--- typeable lines of rows s..e, dedented to the first line. stops at a line
--- that cant be typed so the code keeps reading naturally, and when the code
--- goes left of the first line, as that leaves the scope it started in
-local take = function(lines, s, e, want, width)
-  local out = {}
-  local base
+-- splits a line wider than the typing area at spaces, continuing on lines
+-- indented a bit more, so no code is left out
+local wrap = function(text, width)
+  local pieces = {}
+  local indent = #text:match "^ *"
+  local cont = string.rep(" ", indent + 4 <= width / 2 and indent + 4 or indent)
 
-  for r = s, e do
+  while #text > width do
+    local lead = #text:match "^ *"
+    local cut -- last space that fits, after the indentation
+
+    for i = width + 1, lead + 2, -1 do
+      if text:sub(i, i) == " " then
+        cut = i
+        break
+      end
+    end
+
+    local head, rest
+
+    if cut then
+      head, rest = text:sub(1, cut - 1), text:sub(cut + 1)
+    else
+      head, rest = text:sub(1, width), text:sub(width + 1)
+    end
+
+    table.insert(pieces, (head:gsub("%s+$", "")))
+    text = cont .. (rest:gsub("^%s+", ""))
+  end
+
+  table.insert(pieces, text)
+  return pieces
+end
+
+-- up to `want` lines read on from pos, dedented by the base indentation (or
+-- less, when the code goes further left). blank lines and
+-- lines with non-ASCII characters are skipped, too wide lines wrapped.
+-- returns the lines, where reading stopped and the row of the first line
+local take = function(pos, want, width)
+  local lines = pos.lines
+  local raw = {}
+  local base = pos.base
+  local r = pos.row
+
+  -- every row gives at least one line, so `want` rows are enough
+  while r <= #lines and #raw < want do
     local line = expand_tabs(lines[r]):gsub("%s+$", "")
 
-    if line ~= "" then
+    if line ~= "" and not line:find "[^\32-\126]" then
       local indent = #line:match "^ *"
-      base = base or indent
+      base = math.min(base, indent)
+      table.insert(raw, { row = r, text = line })
+    end
 
-      if indent < base then
-        break
-      end
+    r = r + 1
+  end
 
-      line = line:sub(base + 1)
+  local out = {}
+  local stop = { file = pos.file, lines = lines, row = r, piece = 1, base = base }
 
-      if #line > width or line:find "[^\32-\126]" then
-        break
-      end
+  for i, l in ipairs(raw) do
+    local text = l.text:sub(base + 1)
 
-      table.insert(out, line)
+    -- nested too deep to fit in a readable way
+    if #text:match "^ *" < width / 2 then
+      local pieces = wrap(text, width)
 
-      if #out == want then
-        break
+      for p = (i == 1 and pos.piece or 1), #pieces do
+        if #out == want then
+          stop.row, stop.piece = l.row, p
+          return out, stop, raw[1].row
+        end
+
+        table.insert(out, pieces[p])
       end
     end
   end
 
-  return out
+  return out, stop, raw[1] and raw[1].row
 end
 
--- picks chunks from random files until there are `want` lines
--- returns lines and where the first chunk came from, or nil
-M.gen_lines = function(paths, filetypes, want, width)
+-- where the code is being read from, kept between tests so each one carries
+-- on from where the last one stopped: { key, start = pos, stop = pos }
+local reading
+
+-- `want` lines of code and where they come from ("file:row"), or nil
+-- how: "same" types the current test again (also used for the first one),
+-- "next" goes on from where it stopped, "jump" starts somewhere new
+M.gen_lines = function(paths, filetypes, want, width, how)
   local files = M.list_files(paths, filetypes)
 
   if #files == 0 then
     return nil
   end
 
-  local lines, source = {}, nil
-  local current -- file the test started in, preferred for more lines
-  local used = {} -- starting points already in this test
+  local key = table.concat(paths, "\0") .. "\0" .. table.concat(filetypes or {}, ",")
 
-  for attempt = 1, 50 do
+  if not reading or reading.key ~= key or how == "jump" then
+    local start = pick_start(files)
+
+    if not start then
+      return nil
+    end
+
+    reading = { key = key, start = start, stop = start }
+  elseif how == "next" then
+    reading.start = reading.stop
+  end
+
+  local lines, source = {}, nil
+  local pos = reading.start
+
+  for _ = 1, 20 do
+    local chunk, stop, row = take(pos, want - #lines, width)
+
+    if #chunk > 0 and not source then
+      source = pos.file.name .. ":" .. row
+      reading.start = pos
+    end
+
+    vim.list_extend(lines, chunk)
+    pos = stop
+
     if #lines >= want then
       break
     end
 
-    -- stay in the same file for a few tries so the test doesnt jump around
-    local file = (current and attempt <= 10) and current or files[math.random(1, #files)]
-    local text = read(file.path)
+    -- end of the file, go on in another one
+    pos = pick_start(files)
 
-    if text then
-      local flines = vim.split(text, "\n")
-      local ranges = ts_ranges(text, file.ft)
-
-      if not ranges or #ranges == 0 then
-        ranges = indent_ranges(flines)
-      end
-
-      if #ranges > 0 then
-        local range = ranges[math.random(1, #ranges)]
-        local id = file.path .. ":" .. range[1]
-        -- start at a function/class and keep reading the file from there
-        local chunk = take(flines, range[1], #flines, want - #lines, width)
-
-        -- a chunk should give at least a couple of lines to be worth it
-        if not used[id] and #chunk >= math.min(2, want - #lines) then
-          used[id] = true
-          source = source or (file.name .. ":" .. range[1])
-          current = current or file
-          vim.list_extend(lines, chunk)
-        end
-      end
+    if not pos then
+      break
     end
   end
 
@@ -291,6 +372,7 @@ M.gen_lines = function(paths, filetypes, want, width)
     return nil
   end
 
+  reading.stop = pos
   return lines, source
 end
 

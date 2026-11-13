@@ -53,9 +53,19 @@ M.set_linecount = function(x)
   utils.relayout()
 end
 
+-- code read from files carries on from where a finished test stopped, while
+-- a test restarted midway is typed again
 M.restart = function()
+  local how = state.finished and "next" or "same"
   state.reset_vars()
-  utils.gen_default_lines()
+  utils.gen_default_lines(how)
+  utils.relayout()
+end
+
+-- code from files: start reading somewhere else
+M.jump = function()
+  state.reset_vars()
+  utils.gen_default_lines "jump"
   utils.relayout()
 end
 

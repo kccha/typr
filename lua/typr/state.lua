@@ -67,6 +67,7 @@ local M = {
 }
 
 M.reset_vars = function()
+  M.finished = false
   M.lastchar = nil
   M.secs = 0
 

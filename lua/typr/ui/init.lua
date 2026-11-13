@@ -44,11 +44,26 @@ M.stats = function()
     -- where the code being typed comes from, when its from files
     local source = state.code_source and state.config.mode == "code" and state.code_source
 
-    if source and #source > state.w_with_pad then
-      source = "…" .. source:sub(-(state.w_with_pad - 1))
+    if not source then
+      return { {}, {} }
     end
 
-    return { source and { { source, "commentfg" } } or {}, {} }
+    local hint = {
+      { " CTRL ", "visual" },
+      { " " },
+      { " N ", "visual" },
+      { " - New spot", "commentfg" },
+    }
+
+    local room = state.w_with_pad - voltui.line_w(hint) - 2
+
+    if #source > room then
+      source = "…" .. source:sub(-(room - 1))
+    end
+
+    local line = { { source, "commentfg" }, { "_pad_" } }
+    vim.list_extend(line, hint)
+    return { voltui.hpad(line, state.w_with_pad), {} }
   end
 
   if stats.rawpm == 0 then
